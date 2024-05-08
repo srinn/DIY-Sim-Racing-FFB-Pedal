@@ -222,6 +222,18 @@ TaskHandle_t Task4;
 #endif
 
 
+/**********************************************************************************************/
+/*                                                                                            */
+/*                         Relay module                                                       */
+/*                                                                                            */
+/**********************************************************************************************/
+#ifdef USING_POWER_RELAY
+#include "RelayModule.h"
+RelayModule* servoPowerLine = NULL;
+RelayModule* rs232GroundLine = NULL;
+#endif
+
+
 
 /**********************************************************************************************/
 /*                                                                                            */
@@ -246,9 +258,30 @@ void setup()
   Serial.println("This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.");
   Serial.println("Please check github repo for more detail: https://github.com/ChrGri/DIY-Sim-Racing-FFB-Pedal");
 
+// initialize servo power
+#ifdef USING_POWER_RELAY
+  servoPowerLine = new RelayModule(PIN_RELAY_MODULE_SERVO_POWER);
+  rs232GroundLine = new RelayModule(PIN_RELAY_MODULE_RS232_GROUND);
+  Serial.println(servoPowerLine->ReadRealState());
+  Serial.println("Power off the servo relay and waiting for servo turn off while 10 seconds...");
+  servoPowerLine->Off();
+  rs232GroundLine->Off();
+  Serial.println(servoPowerLine->ReadRealState());
+  delay(10000);
+  Serial.println("Power on the servo relay and waiting for servo booting...");
+  servoPowerLine->On();
+  Serial.println(servoPowerLine->ReadRealState());
+  delay(1000);
+  Serial.println(servoPowerLine->ReadRealState());
+  rs232GroundLine->On();
+  delay(1000);
+#endif
+
 // check whether iSV57 communication can be established
 // and in case, (a) send tuned servo parameters and (b) prepare the servo for signal read
 #ifdef ISV_COMMUNICATION
+
+  isv57.isv57communicationInitialize(); // lazy init for waiting for servo is finish to boot up
 
   bool isv57slaveIdFound_b = isv57.findServosSlaveId();
   Serial.print("iSV57 slaveId found:  ");
@@ -257,7 +290,7 @@ void setup()
   if (!isv57slaveIdFound_b)
   {
     Serial.println( "Restarting ESP" );
-    ESP.restart();
+    restartESP();
   }
 
   
@@ -266,7 +299,7 @@ void setup()
   if (!isv57LifeSignal_b)
   {
     Serial.println( "Restarting ESP" );
-    ESP.restart();
+    restartESP();
   }
 
 
@@ -425,12 +458,12 @@ void setup()
   if(semaphore_updateJoystick==NULL)
   {
     Serial.println("Could not create semaphore");
-    ESP.restart();
+    restartESP();
   }
   if(semaphore_updateConfig==NULL)
   {
     Serial.println("Could not create semaphore");
-    ESP.restart();
+    restartESP();
   }
 
 
@@ -1648,6 +1681,16 @@ void servoCommunicationTask( void * pvParameters )
 
 
   }
+}
+
+
+void restartESP() {
+#ifdef USING_POWER_RELAY
+    servoPowerLine->Off();
+    rs232GroundLine->Off();
+    delay(100);
+#endif
+  ESP.restart();
 }
 
 #endif

@@ -46,7 +46,8 @@
 class isv57communication {
 	
 	public:
-    isv57communication();
+    //isv57communication();
+    void isv57communicationInitialize();
     void setupServoStateReading();
     void sendTunedServoParameters();
     void readAllServoParameters();
